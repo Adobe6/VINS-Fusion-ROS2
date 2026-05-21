@@ -55,6 +55,12 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install support files for loop detection
+install(
+  DIRECTORY ${PROJECT_SOURCE_DIR}/../support_files/
+  DESTINATION share/${PROJECT_NAME}/../support_files
+)
+
 
 
 #install(TARGETS

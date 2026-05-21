@@ -480,8 +480,8 @@ void PoseGraph::optimize4DoF()
             ceres::LossFunction *loss_function;
             loss_function = new ceres::HuberLoss(0.1);
             //loss_function = new ceres::CauchyLoss(1.0);
-            ceres::Manifold* angle_manifold =
-                AngleManifoldFunctor::Create();
+            ceres::LocalParameterization* angle_manifold =
+                AngleLocalParameterizationFunctor::Create();
 
             list<KeyFrame*>::iterator it;
 
@@ -659,7 +659,7 @@ void PoseGraph::optimize6DoF()
             ceres::LossFunction *loss_function;
             loss_function = new ceres::HuberLoss(0.1);
             //loss_function = new ceres::CauchyLoss(1.0);
-            ceres::Manifold* quaternion_manifold = new ceres::QuaternionManifold();
+            ceres::LocalParameterization* quaternion_manifold = new ceres::QuaternionParameterization();
 
             list<KeyFrame*>::iterator it;
 

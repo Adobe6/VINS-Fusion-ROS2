@@ -1068,7 +1068,7 @@ void Estimator::optimization()
     //ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
     for (int i = 0; i < frame_count + 1; i++)
     {
-        ceres::Manifold *local_parameterization = new PoseLocalParameterization();
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
         if(USE_IMU)
             problem.AddParameterBlock(para_SpeedBias[i], SIZE_SPEEDBIAS);
@@ -1078,7 +1078,7 @@ void Estimator::optimization()
 
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        ceres::Manifold *local_parameterization = new PoseLocalParameterization();
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
         if ((ESTIMATE_EXTRINSIC && frame_count == WINDOW_SIZE && Vs[0].norm() > 0.2) || openExEstimation)
         {
@@ -1168,7 +1168,7 @@ void Estimator::optimization()
 
     if (USE_GPU_CERES)
         // std::cout << "1" << endl;
-        options.dense_linear_algebra_library_type = ceres::CUDA;
+        options.dense_linear_algebra_library_type = ceres::EIGEN;
     else
         // std::cout << "2" << endl;
         options.linear_solver_type = ceres::DENSE_SCHUR;
