@@ -1,74 +1,209 @@
-# VINS-Fusion
+# VINS-Fusion-ROS2 — OAK-D Lite 适配版
 
-## VINS-Fusion 的 ROS2 版本
+基于 [VINS-Fusion-ROS2](https://github.com/zinuok/VINS-Fusion-ROS2) 修改，适配 **Ubuntu 22.04 / ROS2 Humble** 和 **Luxonis OAK-D Lite 相机**。
 
-### 注意事项
-- 代码已更新，vins 包可通过 `ros2 run` 或 `ros2 launch` 执行
-- 但 Rviz 配置因某些问题无法保存，仍在修复中
-- GPU 启用/禁用功能也已添加：参考 [EuRoC 配置](https://github.com/zinuok/VINS-Fusion-ROS2/blob/main/config/euroc/euroc_stereo_imu_config.yaml#L19-L21)（参考来源：[此处](https://github.com/pjrambo/VINS-Fusion-gpu) 和 [此处](https://github.com/pjrambo/VINS-Fusion-gpu/issues/33#issuecomment-1097642597)）
-  - GPU 版本有一些 CUDA 库[依赖：带 CUDA 的 OpenCV](https://github.com/zinuok/VINS-Fusion-ROS2/blob/main/vins/src/featureTracker/feature_tracker.h#L21-L23)。因此，如果你觉得麻烦且只需要 CPU 版本，请在 `feature_tracker.h` 第 14 行注释掉以下编译宏：
-  ```bash
-  #define GPU_MODE 1
-  ```
+---
 
-### 前置依赖
-- **系统**
-  - Ubuntu 20.04
-  - ROS2 Foxy
-- **库**
-  - OpenCV 3.4.1（可选启用 CUDA）
-  - OpenCV 3.4.1-contrib
-  - [Ceres Solver-2.1.0](http://ceres-solver.org/installation.html)（可参考[此处](https://github.com/zinuok/VINS-Fusion#-ceres-solver-1)；安装时只需将 1.14.0 改为 2.1.0）
-  - [Eigen-3.3.9](https://github.com/zinuok/VINS-Fusion#-eigen-1)
+## 项目结构
 
-### 传感器设置
-- 相机：Intel RealSense D435i
-- 使用以下 Shell 脚本可以安装带 ROS2 包的 RealSense SDK：
-```bash
-chmod +x realsense_install.sh
-bash realsense_install.sh
+```
+ros2_ws/src/VINS-Fusion-ROS2/
+├── vins/                          # VIO 估计节点
+│   ├── src/
+│   │   ├── estimator/             # 核心状态估计器
+│   │   ├── featureTracker/        # 特征追踪（光流）
+│   │   ├── factor/                # Ceres 优化因子
+│   │   ├── initial/               # 初始化（SFM + IMU对齐）
+│   │   ├── utility/               # 可视化工具
+│   │   ├── rosNodeTest.cpp        # 主节点（订阅图像+IMU）
+│   │   ├── KITTIOdomTest.cpp      # KITTI 离线测试
+│   │   └── KITTIGPSTest.cpp       # KITTI GPS 测试
+│   └── launch/
+│       ├── euroc.launch.py        # EuRoC 数据集启动
+│       └── vins_rviz.launch.py    # RViz2 可视化启动
+│
+├── loop_fusion/                   # 回环检测节点
+│   ├── src/
+│   │   ├── pose_graph.cpp         # 位姿图优化（4DoF/6DoF）
+│   │   ├── pose_graph_node.cpp    # 回环检测主节点
+│   │   ├── keyframe.cpp           # 关键帧管理
+│   │   └── ThirdParty/            # DBoW2 + BRIEF 词库
+│   └── support_files/             # 词库文件（已安装到 install 目录）
+│
+├── global_fusion/                 # GPS+VIO 全局融合（本适配未使用）
+│
+├── camera_models/                 # 相机标定模型库（camodocal）
+│
+├── oak_d_lite_driver/             # OAK-D Lite Python 驱动（新增）
+│   ├── oak_d_lite_driver/
+│   │   └── oak_d_lite_node.py     # 相机+IMU 数据发布节点
+│   └── launch/
+│       └── oak_d_lite_vins.launch.py  # 一键启动所有节点
+│
+├── config/
+│   ├── oak_d_lite/                # OAK-D Lite 配置（新增）
+│   │   ├── oak_d_lite_config.yaml # VINS 主配置文件
+│   │   ├── cam0_pinhole.yaml      # 左目相机内参
+│   │   └── cam1_pinhole.yaml      # 右目相机内参
+│   ├── euroc/                     # EuRoC 数据集配置（参考）
+│   ├── realsense_d435i/           # RealSense D435i 配置（参考）
+│   ├── kitti_odom/                # KITTI 数据集配置（参考）
+│   └── vins_rviz_config.rviz      # RViz 可视化配置
+│
+├── scripts/
+│   └── extract_oak_calib.py       # OAK-D Lite 标定提取脚本（一次性）
+│
+└── support_files/                 # 回环检测词库文件
+    ├── brief_k10L6.bin            # DBoW2 视觉词库（60MB）
+    └── brief_pattern.yml          # BRIEF 特征模板
 ```
 
-### 编译构建
+---
+
+## 前置依赖
+
+| 软件 | 版本 |
+|------|------|
+| Ubuntu | 22.04 |
+| ROS2 | Humble |
+| OpenCV | 系统自带 4.5.4 |
+| Ceres Solver | 系统自带 2.0.0（已做代码兼容） |
+| Eigen | 系统自带 3.4.0 |
+| depthai Python | 3.6.1（pip 安装） |
+
 ```bash
-cd $(PATH_TO_YOUR_ROS2_WS)/src
-git clone https://github.com/zinuok/VINS-Fusion-ROS2
-cd ..
-colcon build --symlink-install && source ./install/setup.bash && source ./install/local_setup.bash
+# 安装 ROS2 依赖
+sudo apt install ros-humble-cv-bridge ros-humble-image-transport
+
+# 安装 depthai Python 包
+pip install depthai
 ```
 
-### 运行
-```bash
-# vins
-ros2 run vins $(PATH_TO_YOUR_VINS_CONFIG_FILE)
+---
 
-# Rviz2 可视化
-ros2 launch vins vins_rviz.launch.xml
+## 编译
+
+```bash
+# 1. 创建工作空间（已有则跳过）
+mkdir -p ~/ros2_ws/src
+
+# 2. 克隆本仓库
+cd ~/ros2_ws/src
+git clone https://github.com/Adobe6/VINS-Fusion-ROS2.git
+
+# 3. 编译
+cd ~/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+
+# 4. source 环境
+source ~/ros2_ws/install/setup.bash
 ```
 
-## 播放 ROS1 录制的 bag 文件
-不幸的是，你不能直接播放 ROS1 录制的 bag 文件。
-这是因为 bag 文件的文件系统结构发生了显著变化。
-ROS2 的 bag 文件需要为每个 bag 文件准备包含元数据的文件夹，可通过以下命令完成：
-- 你需要安装[这个包](https://gitlab.com/ternaris/rosbags)
+---
+
+## 使用方式
+
+### 1. 连接 OAK-D Lite 真机运行
+
 ```bash
-pip install rosbags
+source ~/ros2_ws/install/setup.bash
+
+# 一键启动（驱动 + VINS + 回环检测 + RViz）
+ros2 launch oak_d_lite_driver oak_d_lite_vins.launch.py
 ```
 
-- 运行
+### 2. KITTI 数据集离线测试
+
 ```bash
-export PATH=$PATH:~/.local/bin
-rosbags-convert foo.bag --dst /path/to/bar
+# 先下载 KITTI Odometry 数据集
+# https://www.cvlibs.net/datasets/kitti/eval_odometry.php
+
+# 运行测试
+ros2 run vins kitti_odom_test \
+  ~/ros2_ws/src/VINS-Fusion-ROS2/config/kitti_odom/kitti_config00-02.yaml \
+  /path/to/kitti/odometry/sequences/00/
 ```
 
-## 原始 README：
+### 3. EuRoC 数据集测试
 
-## 8. 致谢
-我们使用了 [Ceres Solver](http://ceres-solver.org/) 进行非线性优化，[DBoW2](https://github.com/dorian3d/DBoW2) 进行回环检测，以及通用[相机模型](https://github.com/hengli/camodocal)和 [GeographicLib](https://geographiclib.sourceforge.io/)。
+```bash
+# 下载 EuRoC MAV 数据集 bag 文件
+# https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets
 
-## 9. 许可证
-源代码基于 [GPLv3](http://www.gnu.org/licenses/) 许可证发布。
+ros2 launch vins euroc.launch.py
+# 另开终端播放 bag
+ros2 bag play euroc_mav_bag.bag
+```
 
-我们仍在努力提高代码的可靠性。如有任何技术问题，请联系 Tong Qin <qintonguavATgmail.com>。
+---
 
-商业咨询请联系 Shaojie Shen <eeshaojieATust.hk>。
+## 配置说明
+
+### OAK-D Lite 配置文件
+
+`config/oak_d_lite/oak_d_lite_config.yaml` 中关键参数：
+
+| 参数 | 当前值 | 说明 |
+|------|--------|------|
+| `imu_topic` | `/imu` | IMU 数据话题 |
+| `image0_topic` | `/cam0/image_raw` | 左目相机话题 |
+| `image1_topic` | `/cam1/image_raw` | 右目相机话题 |
+| `estimate_extrinsic` | 1 | 在线优化 IMU-相机外参 |
+| `estimate_td` | 1 | 在线估计时间偏移 |
+| `acc_n` | 0.08 | 加速度计噪声密度 |
+| `gyr_n` | 0.004 | 陀螺仪噪声密度 |
+
+### 相机驱动频率
+
+`oak_d_lite_driver/oak_d_lite_driver/oak_d_lite_node.py` 顶部可调：
+
+```python
+FPS = 30       # 相机帧率
+IMU_FREQ = 100 # IMU 频率 (Hz)
+```
+
+---
+
+## 已修复的兼容性问题
+
+本仓库已在 Ubuntu 22.04 / ROS2 Humble 环境下修复了以下问题：
+
+| 问题 | 原因 | 修复方式 |
+|------|------|---------|
+| `rclcpp::Duration(0, 0)` 编译错误 | Humble 移除了该构造函数 | 改为 `Duration::from_nanoseconds(0)` |
+| `ceres::Manifold` 不存在 | apt 安装的是 Ceres 2.0 | 改为 `LocalParameterization` API |
+| `ceres::CUDA` 不存在 | Humble 的 Ceres 不含 CUDA | 改为 `ceres::EIGEN` |
+| `cv_bridge.hpp` 找不到 | Humble 使用 `.h` 后缀 | depthai-ros 中改为 `cv_bridge.h` |
+| 回环检测词库未安装 | CMakeLists 缺少 install 规则 | 添加 support_files 安装 |
+
+---
+
+## RViz 可视化
+
+启动 RViz 后默认显示：
+
+| 面板 | 话题 | 说明 |
+|------|------|------|
+| `tracked_image` | `/image_track` | 特征追踪可视化 |
+| `raw_image` | `/cam0/image_raw` | 原始左目画面 |
+| `Path` | `/path` | VIO 轨迹路径 |
+| 点云 | `/point_cloud` | 当前特征点云 |
+| TF | — | 坐标系（world → body → camera） |
+
+回环检测话题（需 `loop_fusion_node` 运行）：
+
+| 话题 | 说明 |
+|------|------|
+| `/pose_graph/pose_graph_path` | 全局优化轨迹 |
+| `/pose_graph/match_image` | 回环匹配图像 |
+| `/pose_graph/camera_pose_visual` | 关键帧位姿 |
+
+---
+
+## 已知限制
+
+- OAK-D Lite 相机帧率受 USB 带宽影响，实际可能低于设定值
+- 回环检测需要走同一区域两次才能触发
+- `global_fusion` 节点需要 GPS 硬件，本配置不含
+- Ubuntu 22.04 / ROS2 Humble 上编译后有少量 deprecated API 警告，不影响运行
