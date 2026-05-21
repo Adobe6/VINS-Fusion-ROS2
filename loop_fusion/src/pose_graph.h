@@ -50,6 +50,7 @@ using namespace DBoW2;
 class PoseGraph
 {
 public:
+	bool stop_optimization = false;
 	PoseGraph();
 	~PoseGraph();
 	void registerPub(rclcpp::Node::SharedPtr n);

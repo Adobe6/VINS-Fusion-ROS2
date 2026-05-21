@@ -31,7 +31,9 @@ PoseGraph::PoseGraph()
 
 PoseGraph::~PoseGraph()
 {
-    t_optimization.detach();
+    stop_optimization = true;
+    if(t_optimization.joinable())
+        t_optimization.join();
 }
 
 void PoseGraph::registerPub(rclcpp::Node::SharedPtr n)
@@ -443,7 +445,7 @@ void PoseGraph::addKeyFrameIntoVoc(KeyFrame* keyframe)
 
 void PoseGraph::optimize4DoF()
 {
-    while(true)
+    while(rclcpp::ok() && !stop_optimization)
     {
         int cur_index = -1;
         int first_looped_index = -1;
@@ -623,7 +625,7 @@ void PoseGraph::optimize4DoF()
 
 void PoseGraph::optimize6DoF()
 {
-    while(true)
+    while(rclcpp::ok() && !stop_optimization)
     {
         int cur_index = -1;
         int first_looped_index = -1;
