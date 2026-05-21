@@ -17,7 +17,7 @@ use_gpu         : 0
 use_gpu_acc_flow: 0
 use_gpu_ceres   : 0
 
-estimate_extrinsic: 1   # 在线优化外参，补偿工厂标定误差
+estimate_extrinsic: 0
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
@@ -32,16 +32,17 @@ body_T_cam1: !!opencv-matrix
 
 multiple_thread: 1
 
-max_cnt: 150
-min_dist: 30
-freq: 10
+max_cnt: 80
+min_dist: 20
+freq: 5
 F_threshold: 1.0
 show_track: 1
 flow_back: 1
 
-max_solver_time: 0.04
-max_num_iterations: 8
-keyframe_parallax: 10.0
+#optimization parameters
+max_solver_time: 0.02
+max_num_iterations: 4
+keyframe_parallax: 15.0
 
 acc_n: 0.08
 gyr_n: 0.004
@@ -49,7 +50,7 @@ acc_w: 0.001
 gyr_w: 0.0001
 g_norm: 9.805
 
-estimate_td: 1                      # 在线估计相机与IMU的时间偏移
+estimate_td: 0                      # 固定时间偏移，节省算力
 td: 0.0
 
 load_previous_pose_graph: 0

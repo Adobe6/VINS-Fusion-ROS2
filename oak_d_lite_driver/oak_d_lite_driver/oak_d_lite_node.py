@@ -8,8 +8,8 @@ from builtin_interfaces.msg import Time
 import threading
 import time
 
-FPS = 30
-IMU_FREQ = 100
+FPS = 15
+IMU_FREQ = 50
 
 
 class OAKDLiteNode(Node):

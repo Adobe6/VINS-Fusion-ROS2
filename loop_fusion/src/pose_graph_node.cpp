@@ -420,8 +420,8 @@ int main(int argc, char **argv)
     
     VISUALIZATION_SHIFT_X = 0;
     VISUALIZATION_SHIFT_Y = 0;
-    SKIP_CNT = 0;
-    SKIP_DIS = 0;
+    SKIP_CNT = 2;
+    SKIP_DIS = 0.5;
 
     if(argc != 2)
     {
