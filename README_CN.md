@@ -163,6 +163,23 @@ FPS = 30       # 相机帧率
 IMU_FREQ = 100 # IMU 频率 (Hz)
 ```
 
+### 点云密度调整
+
+`config/oak_d_lite/oak_d_lite_config.yaml` 中修改：
+
+| 参数 | 当前值 | 调大密度建议 | 说明 |
+|------|--------|-------------|------|
+| `max_cnt` | 150 | **300 ~ 500** | 最大追踪特征点数，越大点云越密 |
+| `min_dist` | 30 | **15 ~ 20** | 特征点最小间距（像素），越小点分布越密 |
+
+示例（密度提升 2~4 倍）：
+```yaml
+max_cnt: 300
+min_dist: 15
+```
+
+注意：点云越密，CPU 负载越高，`max_solver_time: 0.04` 限制了每次优化时间，特征过多时可能会跳过部分优化。
+
 ---
 
 ## 已修复的兼容性问题
@@ -207,3 +224,45 @@ IMU_FREQ = 100 # IMU 频率 (Hz)
 - 回环检测需要走同一区域两次才能触发
 - `global_fusion` 节点需要 GPS 硬件，本配置不含
 - Ubuntu 22.04 / ROS2 Humble 上编译后有少量 deprecated API 警告，不影响运行
+
+---
+
+## 快速启动（终端命令速查）
+
+### 一键启动（OAK-D Lite 真机 + VINS + 回环 + RViz）
+
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch oak_d_lite_driver oak_d_lite_vins.launch.py
+```
+
+### 分别启动（调试用）
+
+```bash
+# 终端 1 — 相机驱动
+source ~/ros2_ws/install/setup.bash
+ros2 run oak_d_lite_driver oak_d_lite_node
+
+# 终端 2 — VINS 定位
+source ~/ros2_ws/install/setup.bash
+ros2 run vins vins_node \
+  ~/ros2_ws/src/VINS-Fusion-ROS2/config/oak_d_lite/oak_d_lite_config.yaml
+
+# 终端 3 — 回环检测
+source ~/ros2_ws/install/setup.bash
+ros2 run loop_fusion loop_fusion_node \
+  ~/ros2_ws/src/VINS-Fusion-ROS2/config/oak_d_lite/oak_d_lite_config.yaml
+
+# 终端 4 — RViz 可视化
+source ~/ros2_ws/install/setup.bash
+ros2 launch vins vins_rviz.launch.py
+```
+
+### KITTI 数据集离线测试
+
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 run vins kitti_odom_test \
+  ~/ros2_ws/src/VINS-Fusion-ROS2/config/kitti_odom/kitti_config00-02.yaml \
+  /path/to/kitti/odometry/sequences/00/
+```
