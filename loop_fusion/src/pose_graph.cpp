@@ -58,7 +58,13 @@ void PoseGraph::setIMUFlag(bool _use_imu)
         printf("VO input, perfrom 6 DoF pose graph optimization\n");
         t_optimization = std::thread(&PoseGraph::optimize6DoF, this);
     }
+}
 
+void PoseGraph::waitForShutdown()
+{
+    stop_optimization = true;
+    if(t_optimization.joinable())
+        t_optimization.join();
 }
 
 void PoseGraph::loadVocabulary(std::string voc_path)

@@ -524,5 +524,7 @@ int main(int argc, char **argv)
     
     rclcpp::spin(n);
 
+    posegraph.waitForShutdown();
+
     return 0;
 }

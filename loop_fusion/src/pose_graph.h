@@ -58,6 +58,7 @@ public:
 	void loadKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop);
 	void loadVocabulary(std::string voc_path);
 	void setIMUFlag(bool _use_imu);
+	void waitForShutdown();
 	KeyFrame* getKeyFrame(int index);
 	nav_msgs::msg::Path path[10];
 	nav_msgs::msg::Path base_path;
