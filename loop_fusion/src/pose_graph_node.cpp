@@ -525,6 +525,10 @@ int main(int argc, char **argv)
     rclcpp::spin(n);
 
     posegraph.waitForShutdown();
+    if(measurement_process.joinable())
+        measurement_process.join();
+    if(keyboard_command_process.joinable())
+        keyboard_command_process.detach();
 
     return 0;
 }
